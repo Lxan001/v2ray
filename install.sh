@@ -759,8 +759,9 @@ install_v2ray() {
 			git clone https://github.com/Lxan001/v2ray -b test /etc/v2ray/233boy/v2ray
 		else
 			git clone https://github.com/Lxan001/v2ray /etc/v2ray/233boy/v2ray
+                                 popd
 	fi
-               popd
+        
 
 	if [[ ! -d /etc/v2ray/233boy/v2ray ]]; then
 		echo
