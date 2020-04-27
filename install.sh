@@ -27,9 +27,9 @@ else
 fi
 
 # 笨笨的检测方法
-if [[ -f /usr/bin/apt-get || -f /usr/bin/yum ]] && [[ -f /bin/systemctl ]]; then
+if [[ $(command -v apt-get) || $(command -v yum) ]] && [[ $(command -v systemctl) ]]; then
 
-	if [[ -f /usr/bin/yum ]]; then
+	if [[ $(command -v yum) ]]; then
 
 		cmd="yum"
 
@@ -103,6 +103,7 @@ _load() {
 	local _dir="/etc/v2ray/233boy/v2ray/src/"
 	. "${_dir}$@"
 }
+
 
 v2ray_config() {
 	# clear
@@ -697,7 +698,7 @@ domain_check() {
 	# 	$cmd install dnsutils -y
 	# fi
 	# test_domain=$(dig $domain +short)
-	test_domain=$(ping $domain -c 1 | grep -oE -m1 "([0-9]{1,3}\.){3}[0-9]{1,3}")
+	test_domain=$(ping $domain -c 1 | grep -oE -m1 "([0-9]{1,3}\.){3}[0-9]{1,3}") 
 	if [[ $test_domain != $ip ]]; then
 		echo
 		echo -e "$red 检测域名解析错误....$none"
@@ -731,21 +732,22 @@ caddy_config() {
 install_v2ray() {
 	$cmd update -y
 	if [[ $cmd == "apt-get" ]]; then
-		$cmd install -y lrzsz git zip unzip curl wget qrencode libcap2-bin
+		$cmd install -y lrzsz git zip unzip curl wget qrencode libcap2-bin dbus
 	else
 		# $cmd install -y lrzsz git zip unzip curl wget qrencode libcap iptables-services
 		$cmd install -y lrzsz git zip unzip curl wget qrencode libcap
 	fi
 	ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 	[ -d /etc/v2ray ] && rm -rf /etc/v2ray
-	date -s "$(curl -sI g.cn | grep Date | cut -d' ' -f3-6)Z"
+	# date -s "$(curl -sI g.cn | grep Date | cut -d' ' -f3-6)Z"
+	
 
 	if [[ $local_install ]]; then
 		if [[ ! -d $(pwd)/config ]]; then
 			echo
 			echo -e "$red 哎呀呀...安装失败了咯...$none"
 			echo
-			echo -e " 请确保你有完整的上传 v2ray6.com 的 V2Ray 一键安装脚本 & 管理脚本到当前 ${green}$(pwd) $none目录下"
+			echo -e " 请确保你有完整的上传 233v2.com 的 V2Ray 一键安装脚本 & 管理脚本到当前 ${green}$(pwd) $none目录下"
 			echo
 			exit 1
 		fi
@@ -754,13 +756,11 @@ install_v2ray() {
 	else
 		pushd /tmp
 		if [[ $_test ]]; then
-			git clone https://github.com/NGXTDN/v2ray -b test /etc/v2ray/233boy/v2ray
+			git clone https://github.com/Lxan001/v2ray -b test /etc/v2ray/233boy/v2ray
 		else
-			git clone https://github.com/NGXTDN/v2ray /etc/v2ray/233boy/v2ray
-		fi
-		popd
-
+			git clone https://github.com/Lxan001/v2ray /etc/v2ray/233boy/v2ray
 	fi
+               popd
 
 	if [[ ! -d /etc/v2ray/233boy/v2ray ]]; then
 		echo
@@ -862,10 +862,10 @@ config() {
 
 	if [[ $cmd == "apt-get" ]]; then
 		cat >/etc/network/if-pre-up.d/iptables <<-EOF
-#!/bin/sh
-/sbin/iptables-restore < /etc/iptables.rules.v4
-/sbin/ip6tables-restore < /etc/iptables.rules.v6
-	EOF
+			#!/bin/sh
+			/sbin/iptables-restore < /etc/iptables.rules.v4
+			/sbin/ip6tables-restore < /etc/iptables.rules.v6
+		EOF
 		chmod +x /etc/network/if-pre-up.d/iptables
 		# else
 		# 	[ $(pgrep "firewall") ] && systemctl stop firewalld
@@ -911,30 +911,30 @@ backup_config() {
 	fi
 }
 
-try_enable_bbr() {
-	if [[ $(uname -r | cut -b 1) -eq 4 ]]; then
-		case $(uname -r | cut -b 3-4) in
-		9. | [1-9][0-9])
-			sed -i '/net.ipv4.tcp_congestion_control/d' /etc/sysctl.conf
-			sed -i '/net.core.default_qdisc/d' /etc/sysctl.conf
-			echo "net.ipv4.tcp_congestion_control = bbr" >>/etc/sysctl.conf
-			echo "net.core.default_qdisc = fq" >>/etc/sysctl.conf
-			sysctl -p >/dev/null 2>&1
-			;;
-		esac
-	fi
-}
 
 get_ip() {
-	ip=$(curl -s https://ipinfo.io/ip)
-	[[ -z $ip ]] && ip=$(curl -s https://api.ip.sb/ip)
-	[[ -z $ip ]] && ip=$(curl -s https://api.ipify.org)
-	[[ -z $ip ]] && ip=$(curl -s https://ip.seeip.org)
-	[[ -z $ip ]] && ip=$(curl -s https://ifconfig.co/ip)
-	[[ -z $ip ]] && ip=$(curl -s https://api.myip.com | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
-	[[ -z $ip ]] && ip=$(curl -s icanhazip.com)
-	[[ -z $ip ]] && ip=$(curl -s myip.ipip.net | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
-	[[ -z $ip ]] && echo -e "\n$red 这垃圾小鸡扔了吧！$none\n" && exit
+
+	ipv4=$(curl -4 -s ipv4.icanhazip.com)
+	[[ -z $ipv4 ]] && ipv4=$(curl -s -4 https://api.ip.sb/ip)
+	[[ -z $ipv4 ]] && ipv4=$(curl -s -4 https://api.ipify.org)
+	[[ -z $ipv4 ]] && ipv4=$(curl -s -4 https://ip.seeip.org)
+	[[ -z $ipv4 ]] && ipv4=$(curl -s -4 https://ifconfig.co/ip)
+	[[ -z $ipv4 ]] && ipv4=$(curl -s -4 https://api.myip.com | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
+	[[ -z $ipv4 ]] && ipv4=$(curl -s -4 icanhazip.com)
+	[[ -z $ipv4 ]] && ipv4=$(curl -s -4 myip.ipip.net | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
+	[[ -z $ipv4 ]] && echo -e "\n$red 这垃圾小鸡扔了吧！$none\n" 
+    
+    ipv6=$(curl -6 -s ipv6.icanhazip.com)
+	[[ -z $ipv6 ]] && ipv6=$(curl -s -6 https://api.ip.sb/ip)
+	[[ -z $ipv6 ]] && ipv6=$(curl -s -6 https://ip.seeip.org)
+	[[ -z $ipv6 ]] && ipv6=$(curl -s -6 https://ifconfig.co/ip)	
+	[[ -z $ipv6 ]] && ipv6=$(curl -s -6 icanhazip.com)
+	[[ -z $ipv6 ]] && echo -e "\n$red 这垃圾小鸡扔了吧！$none\n"
+	
+	if [ $ipv6 ]; then
+	ip=$ipv6 ##默认ipv6 edit by Scaleya
+	else ip=$ipv4
+	fi
 }
 
 error() {
@@ -984,7 +984,6 @@ install() {
 	blocked_hosts
 	shadowsocks_config
 	install_info
-	try_enable_bbr
 	# [[ $caddy ]] && domain_check
 	install_v2ray
 	if [[ $caddy || $v2ray_port == "80" ]]; then
@@ -1021,17 +1020,19 @@ uninstall() {
 		echo -e "
 		$red 大胸弟...你貌似毛有安装 V2Ray ....卸载个鸡鸡哦...$none
 
-		备注...仅支持卸载使用我 (v2ray6.com) 提供的 V2Ray 一键安装脚本
+		备注...仅支持卸载使用我 (233v2.com) 提供的 V2Ray 一键安装脚本
 		" && exit 1
 	fi
 
 }
 
 args=$1
+_gitbranch=$2
 [ -z $1 ] && args="online"
 case $args in
 online)
 	#hello world
+	[[ -z $_gitbranch ]] && _gitbranch="master"
 	;;
 local)
 	local_install=true
@@ -1053,11 +1054,11 @@ esac
 clear
 while :; do
 	echo
-	echo "........... V2Ray 一键安装脚本 & 管理脚本 by v2ray6.com .........."
+	echo "........... V2Ray 一键安装脚本 & 管理脚本 by 233v2.com .........."
 	echo
-	echo "帮助说明: https://v2ray6.com/post/1/"
+	echo "帮助说明: https://233v2.com/post/1/"
 	echo
-	echo "搭建教程: https://v2ray6.com/post/2/"
+	echo "搭建教程: https://233v2.com/post/2/"
 	echo
 	echo " 1. 安装"
 	echo
